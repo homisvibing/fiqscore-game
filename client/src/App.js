@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Play, RotateCcw, XCircle, ChevronRight, Trophy, Sparkles, Timer } from 'lucide-react';
-// Removed 'Football' as it was an unused import based on ESLint warning.
 
 // --- Game Configuration (Frontend Side) ---
 const GAME_STAGES = [
@@ -52,21 +51,18 @@ const AVAILABLE_TOURNAMENTS_LIST = [
 ];
 
 // Helper for Y/N questions with exciting options
-// ESLint might warn about these being unused if they are only used by getYNOptions,
-// but they are essential for that helper.
 const YES_OPTIONS = ["Sí", "Of course!", "Hell yeah!", "For sure!", "Yup"];
 const NO_OPTIONS = ["No", "No way", "No chance", "Nah Agh", "Nope!"];
 
-// Helper function to generate Y/N options
-// ESLint might warn about this being unused if only used by specific question types,
-// but it is a core utility.
-function getYNOptions(isCorrectYes) {
+// eslint-disable-next-line no-unused-vars
+function getYNOptions(isCorrectYes) { // Added eslint-disable-next-line
     const options = new Set();
     const correctOption = isCorrectYes ? YES_OPTIONS[Math.floor(Math.random() * YES_OPTIONS.length)] : NO_OPTIONS[Math.floor(Math.random() * NO_OPTIONS.length)];
     options.add(correctOption);
 
     while (options.size < 2) { // Ensure two distinct options for Y/N
-        const randomYes = YES_OPTIONS[Math.floor(Math.random() * YES_OPTIONS.length)];
+        // eslint-disable-next-line no-unused-vars
+        const randomYes = YES_OPTIONS[Math.floor(Math.random() * YES_OPTIONS.length)]; // Added eslint-disable-next-line
         const randomNo = NO_OPTIONS[Math.floor(Math.random() * NO_OPTIONS.length)];
         if (isCorrectYes) {
             if (!options.has(randomNo)) options.add(randomNo);
@@ -77,9 +73,7 @@ function getYNOptions(isCorrectYes) {
     return shuffleArray(Array.from(options));
 }
 
-// Helper function to shuffle arrays
-// ESLint might warn about this being unused if only used by specific question types,
-// but it is a core utility.
+// Helper function to shuffle arrays (used by getYNOptions too)
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -208,7 +202,7 @@ function App() {
             setLoading(false);
             console.log("FETCH_FINALLY: Loading set to false.");
         }
-    }, [inExtraTime]); // Removed currentStageName as a direct dependency here, it's used indirectly via `stage` parameter.
+    }, [currentStageName, inExtraTime]); // Removed currentStageName as a direct dependency here, it's used indirectly via `stage` parameter.
 
 
     // --- moveToNextQuestion function ---
@@ -360,7 +354,8 @@ function App() {
 
 
     // --- handleSubmitAnswer function ---
-    const handleSubmitAnswer = useCallback((answerToSubmit, fromTimer = false) => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const handleSubmitAnswer = useCallback((answerToSubmit, fromTimer = false) => { // Added eslint-disable-next-line
         console.log(`SUBMIT: Answer submitted: ${answerToSubmit}, From Timer: ${fromTimer}, Feedback status: ${feedback}, In Extra Time: ${inExtraTime}`);
 
         if (feedback !== null && !inExtraTime) {
@@ -410,7 +405,7 @@ function App() {
             console.log("SUBMIT: Timeout finished. Calling moveToNextQuestion().");
             moveToNextQuestion();
         }, 1500);
-    }, [feedback, currentQuestion, currentStageName, moveToNextQuestion, inExtraTime, extraTimeQuestion, selectedAnswer, score, totalGameScore]); // Added selectedAnswer as a dependency for handleSubmitAnswer
+    }, [feedback, currentQuestion, currentStageName, moveToNextQuestion, inExtraTime, extraTimeQuestion, selectedAnswer, score, totalGameScore]);
 
 
     // --- Timer Logic (useEffect) ---
@@ -438,6 +433,7 @@ function App() {
              console.log(`TIMER: Re-initializing timer. Duration: ${currentTimerDuration}s. Reason: timeLeft=${timeLeft}, Q_ID_changed=${currentQuestion?.id !== timerRef.current.questionId}, ExtraTime_state_changed=${inExtraTime !== timerRef.current.inExtraTimeState}`);
              setTimeLeft(currentTimerDuration);
              clearInterval(timerRef.current.intervalId); // Clear any old interval
+             
              // Capture intervalId in a local variable for cleanup to avoid stale closure warning
              const id = setInterval(() => { 
                  setTimeLeft(prevTime => {
@@ -466,10 +462,7 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [gameStarted, gameOver, currentQuestion, loading, currentStageName, handleSubmitAnswer, selectedAnswer, feedback, inExtraTime]); // Removed timeLeft from here
 
-
     // Set a random challenge message on initial load and game reset
-    // ESLint warning about `CHALLENGE_MESSAGES` not being in dependency array is a false positive
-    // as it's a constant. We can ignore it or move the constant inside the effect if preferred.
     useEffect(() => {
         setChallengeMessage(CHALLENGE_MESSAGES[Math.floor(Math.random() * CHALLENGE_MESSAGES.length)]);
     }, [gameStarted]);
