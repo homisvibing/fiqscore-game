@@ -1,0 +1,16 @@
+[build]
+  base = "client/"
+  command = "npm run build"
+  publish = "build/"
+  functions = "netlify/functions/" # <-- THIS LINE IS CRUCIAL
+
+[dev]
+  command = "npm start --prefix client"
+  targetPort = 3000
+  port = 8888
+  framework = "#custom"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

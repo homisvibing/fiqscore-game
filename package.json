@@ -1,0 +1,22 @@
+{
+  "name": "fiqscore-game",
+  "version": "1.0.0",
+  "description": "A football trivia game to test your Football IQ Score.",
+  "main": "index.js",
+  "scripts": {
+    "start": "netlify dev",
+    "build": "cd client && npm run build",
+    "netlify-build": "npm run build",
+    "postinstall": "cd client && npm install"
+  },
+  "keywords": [
+    "football",
+    "trivia",
+    "quiz",
+    "react",
+    "netlify",
+    "game"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
