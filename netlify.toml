@@ -1,16 +1,19 @@
-[build]
-  base = "client/"
-  command = "npm run build"
-  publish = "build/"
-  functions = "netlify/functions/" # <-- THIS LINE IS CRUCIAL
+    [build]
+      base = "client/"
+      command = "npm run build"
+      publish = "build/"
+      functions = "netlify/functions/"
+      # Remove or comment out the 'environment' section below:
+      # environment:
+      #   - MONGODB_URI
 
-[dev]
-  command = "npm start --prefix client"
-  targetPort = 3000
-  port = 8888
-  framework = "#custom"
+    [dev]
+      command = "npm start --prefix client"
+      targetPort = 3000
+      port = 8888
+      framework = "#custom"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+    [[redirects]]
+      from = "/*"
+      to = "/index.html"
+      status = 200
