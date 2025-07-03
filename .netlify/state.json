@@ -1,0 +1,19 @@
+{
+	"geolocation": {
+		"data": {
+			"city": "Yangon",
+			"country": {
+				"code": "MM",
+				"name": "Myanmar"
+			},
+			"subdivision": {
+				"code": "06",
+				"name": "Yangon"
+			},
+			"timezone": "Asia/Yangon",
+			"latitude": 16.7964,
+			"longitude": 96.1667
+		},
+		"timestamp": 1751568025068
+	}
+}

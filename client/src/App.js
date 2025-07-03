@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, RotateCcw, XCircle, ChevronRight, Trophy, Sparkles, Timer, Football } from 'lucide-react'; // Added Football icon
+import { Play, RotateCcw, XCircle, ChevronRight, Trophy, Sparkles, Timer } from 'lucide-react';
+// Removed 'Football' as it was an unused import based on ESLint warning.
 
 // --- Game Configuration (Frontend Side) ---
 const GAME_STAGES = [
@@ -44,19 +45,41 @@ const CHALLENGE_MESSAGES = [
     "Only Champions answer with confidence."
 ];
 
-// --- IMPORTANT: This list must match the competition names used in your getQuestions.js dummy data ---
+// --- IMPORTANT: This list must match the 'competition.name' values in your MongoDB ---
 const AVAILABLE_TOURNAMENTS_LIST = [
     "FIFA World Cup",
     "Premier League"
-    // Note: Other tournaments like UEFA Champion League, La Liga will be added in Phase 3
-    // when we integrate with actual StatsBomb data. For now, we use what's in getQuestions.js.
 ];
 
 // Helper for Y/N questions with exciting options
+// ESLint might warn about these being unused if they are only used by getYNOptions,
+// but they are essential for that helper.
 const YES_OPTIONS = ["Sí", "Of course!", "Hell yeah!", "For sure!", "Yup"];
 const NO_OPTIONS = ["No", "No way", "No chance", "Nah Agh", "Nope!"];
 
+// Helper function to generate Y/N options
+// ESLint might warn about this being unused if only used by specific question types,
+// but it is a core utility.
+function getYNOptions(isCorrectYes) {
+    const options = new Set();
+    const correctOption = isCorrectYes ? YES_OPTIONS[Math.floor(Math.random() * YES_OPTIONS.length)] : NO_OPTIONS[Math.floor(Math.random() * NO_OPTIONS.length)];
+    options.add(correctOption);
+
+    while (options.size < 2) { // Ensure two distinct options for Y/N
+        const randomYes = YES_OPTIONS[Math.floor(Math.random() * YES_OPTIONS.length)];
+        const randomNo = NO_OPTIONS[Math.floor(Math.random() * NO_OPTIONS.length)];
+        if (isCorrectYes) {
+            if (!options.has(randomNo)) options.add(randomNo);
+        } else {
+            if (!options.has(randomNo)) options.add(randomNo);
+        }
+    }
+    return shuffleArray(Array.from(options));
+}
+
 // Helper function to shuffle arrays
+// ESLint might warn about this being unused if only used by specific question types,
+// but it is a core utility.
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -97,7 +120,7 @@ function App() {
     const [inExtraTime, setInExtraTime] = useState(false); // New state for extra time
     const [extraTimeQuestion, setExtraTimeQuestion] = useState(null);
 
-    // --- Derived State ---
+    // --- Derived State (explicitly dependent on extraTimeQuestion and inExtraTime) ---
     const currentStageName = GAME_STAGES[currentStageIndex];
     const passThreshold = STAGE_PASS_THRESHOLDS[currentStageName];
     // This derived state now explicitly checks if inExtraTime is true AND extraTimeQuestion is available
@@ -185,7 +208,7 @@ function App() {
             setLoading(false);
             console.log("FETCH_FINALLY: Loading set to false.");
         }
-    }, [currentStageName, inExtraTime]); // Dependencies to ensure fetchQuestions re-creates when these change, crucial for `inExtraTime` context
+    }, [inExtraTime]); // Removed currentStageName as a direct dependency here, it's used indirectly via `stage` parameter.
 
 
     // --- moveToNextQuestion function ---
@@ -201,7 +224,7 @@ function App() {
                 if (currentStageIndex === GAME_STAGES.length - 1) { // The Final is the last stage
                     setWinState(true);
                     setGameOver(true);
-                    setError("You have won the FIQScore Tournament after extra time!");
+                    setError("You have won the WTFootball Tournament after extra time!");
                     console.log("MOVE: Game Won after Extra Time!");
                 } else {
                     setCurrentStageIndex(prevIndex => prevIndex + 1);
@@ -314,7 +337,7 @@ function App() {
                 if (currentStageIndex === GAME_STAGES.length - 1) {
                     setWinState(true);
                     setGameOver(true);
-                    gameOutcomeMessage = "You have won the FIQScore Tournament!";
+                    gameOutcomeMessage = "You have won the WTFootball Tournament!";
                     setError(gameOutcomeMessage);
                     console.log("MOVE: Game Won!");
                 } else {
@@ -387,7 +410,7 @@ function App() {
             console.log("SUBMIT: Timeout finished. Calling moveToNextQuestion().");
             moveToNextQuestion();
         }, 1500);
-    }, [feedback, currentQuestion, currentStageName, moveToNextQuestion, inExtraTime, extraTimeQuestion, selectedAnswer, score, totalGameScore]);
+    }, [feedback, currentQuestion, currentStageName, moveToNextQuestion, inExtraTime, extraTimeQuestion, selectedAnswer, score, totalGameScore]); // Added selectedAnswer as a dependency for handleSubmitAnswer
 
 
     // --- Timer Logic (useEffect) ---
@@ -415,17 +438,19 @@ function App() {
              console.log(`TIMER: Re-initializing timer. Duration: ${currentTimerDuration}s. Reason: timeLeft=${timeLeft}, Q_ID_changed=${currentQuestion?.id !== timerRef.current.questionId}, ExtraTime_state_changed=${inExtraTime !== timerRef.current.inExtraTimeState}`);
              setTimeLeft(currentTimerDuration);
              clearInterval(timerRef.current.intervalId); // Clear any old interval
-             timerRef.current.intervalId = setInterval(() => { // Store interval ID in a property
+             // Capture intervalId in a local variable for cleanup to avoid stale closure warning
+             const id = setInterval(() => { 
                  setTimeLeft(prevTime => {
                      if (prevTime <= 1) {
                          console.log("TIMER: Countdown finished.");
-                         clearInterval(timerRef.current.intervalId); // Clear by property
+                         clearInterval(id); // Clear using the local id
                          handleSubmitAnswer(selectedAnswer, true); // Automatically submit if time runs out
                          return 0;
                      }
                      return prevTime - 1;
                  });
              }, 1000);
+             timerRef.current.intervalId = id; // Store interval ID in a property
              // Store current question ID and extra time state with the timer ref object
              timerRef.current.questionId = currentQuestion.id;
              timerRef.current.inExtraTimeState = inExtraTime;
@@ -435,11 +460,16 @@ function App() {
         // Cleanup on component unmount or dependencies change
         return () => {
             console.log("TIMER: Cleanup function running. Clearing interval.");
-            clearInterval(timerRef.current.intervalId); // Clear by property
+            // Use the stored intervalId for cleanup
+            clearInterval(timerRef.current.intervalId);
         };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [gameStarted, gameOver, currentQuestion, loading, currentStageName, handleSubmitAnswer, selectedAnswer, feedback, inExtraTime]); // Removed timeLeft from here
 
+
     // Set a random challenge message on initial load and game reset
+    // ESLint warning about `CHALLENGE_MESSAGES` not being in dependency array is a false positive
+    // as it's a constant. We can ignore it or move the constant inside the effect if preferred.
     useEffect(() => {
         setChallengeMessage(CHALLENGE_MESSAGES[Math.floor(Math.random() * CHALLENGE_MESSAGES.length)]);
     }, [gameStarted]);
@@ -529,7 +559,7 @@ function App() {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-gray-900 to-gray-700 text-gray-100 font-inter">
                 <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md text-center border border-gray-700 animate-fade-in">
-                    <h1 className="text-6xl font-bold text-green-500 mb-4 tracking-tight drop-shadow-md">FIQScore</h1>
+                    <h1 className="text-6xl font-bold text-green-500 mb-4 tracking-tight drop-shadow-md">WTFootball</h1>
                     <p className="text-lg mb-8 italic text-gray-400">"{challengeMessage}"</p>
 
                     {error && (
@@ -626,7 +656,6 @@ function App() {
     }
 
     if (gameOver) {
-        // --- Game Over / Win Screen ---
         return (
             <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-gray-900 to-gray-700 text-gray-100 font-inter">
                 <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md text-center border border-gray-700 animate-fade-in">
@@ -634,13 +663,13 @@ function App() {
                         <>
                             <Trophy className="mx-auto text-yellow-400 mb-4" size={64} />
                             <h2 className="text-4xl font-bold text-yellow-400 mb-4">CONGRATULATIONS!</h2>
-                            <p className="text-xl text-gray-200 mb-6">{error}</p> {/* Error used for win message */}
+                            <p className="text-xl text-gray-200 mb-6">{error}</p>
                         </>
                     ) : (
                         <>
                             <XCircle className="mx-auto text-red-500 mb-4" size={64} />
                             <h2 className="text-4xl font-bold text-red-500 mb-4">GAME OVER!</h2>
-                            <p className="text-xl text-gray-200 mb-6">{error}</p> {/* Error used for game over message */}
+                            <p className="text-xl text-gray-200 mb-6">{error}</p>
                         </>
                     )}
                     <p className="text-2xl font-semibold mb-6">Total Score: {totalGameScore}</p>
@@ -656,7 +685,6 @@ function App() {
     }
 
     if (loading) {
-        // --- Loading Screen ---
         return (
             <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-gray-900 to-gray-700 text-gray-100 font-inter">
                 <div className="text-center">
@@ -666,9 +694,22 @@ function App() {
             </div>
         );
     }
+    
+    // Specifically for extra time loading
+    // Only display this if inExtraTime is true, extraTimeQuestion is null, AND we are NOT currently fetching (loading is false)
+    if (inExtraTime && !extraTimeQuestion && !loading) {
+        console.log("RENDER: Displaying 'Loading Extra Time Question...' screen.");
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-gray-900 to-gray-700 text-gray-100 font-inter">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-500 mb-4"></div>
+                    <p className="text-xl">Loading Extra Time Question...</p>
+                </div>
+            </div>
+        );
+    }
 
-    if (error && !gameStarted) { // Only show persistent error if not in game and error exists
-        // --- Error Screen for initial load ---
+    if (error && !gameStarted) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-gray-900 to-gray-700 text-gray-100 font-inter">
                 <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md text-center border border-gray-700 animate-fade-in">
@@ -686,23 +727,9 @@ function App() {
         );
     }
     
-    // Specifically for extra time loading (if extraTimeQuestion is null but inExtraTime is true)
-    if (inExtraTime && !extraTimeQuestion && !loading) {
-        console.log("RENDER: Displaying 'Loading Extra Time Question...' screen.");
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-gray-900 to-gray-700 text-gray-100 font-inter">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-500 mb-4"></div>
-                    <p className="text-xl">Loading Extra Time Question...</p>
-                </div>
-            </div>
-        );
-    }
-
-    // --- Main Game Screen ---
+    // Main Game Screen - This is the last check before displaying the question content
     if (!currentQuestion) {
-        // This case handles when questionsForStage is empty or currentQuestion is null initially
-        // (e.g., after loading, no questions were found)
+        console.log("RENDER: No current question available for display. This should ideally not happen if fetches are successful.");
         return (
             <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-gray-900 to-gray-700 text-gray-100 font-inter">
                 <p className="text-xl">No questions loaded for this stage. Please try again or select different criteria.</p>
@@ -716,15 +743,25 @@ function App() {
         );
     }
 
-    const isAnswerSubmitted = feedback !== null; // True if answer selected or time ran out
+    const isAnswerSubmitted = feedback !== null;
 
     return (
         <div className="flex flex-col items-center justify-between min-h-screen p-4 bg-gradient-to-br from-gray-900 to-gray-700 text-gray-100 font-inter">
             {/* Header / Dashboard */}
             <div className="w-full max-w-2xl bg-gray-800 p-4 rounded-lg shadow-md mb-6 border border-gray-700">
                 <div className="flex justify-between items-center text-sm sm:text-lg font-semibold mb-2">
-                    <span className="text-green-400 flex items-center gap-2"><Sparkles size={18} /> {currentStageName} {currentStageName === 'Group Stage' ? ` (Match ${groupStageMatchesPlayed + 1} of 4)` : ''}</span>
-                    <span className="text-blue-400 flex items-center gap-2"><ChevronRight size={18} /> {inExtraTime ? "DO OR DIE!" : `Q${currentQuestionIndexInStage + 1} of ${questionsForStage.length}`}</span>
+                    <span className="text-green-400 flex items-center gap-2">
+                        <Sparkles size={18} />
+                        {inExtraTime ? (
+                            <span className="text-red-400 font-bold">EXTRA TIME - {currentStageName}</span>
+                        ) : (
+                            `${currentStageName} ${currentStageName === 'Group Stage' ? ` (Match ${groupStageMatchesPlayed + 1} of 4)` : ''}`
+                        )}
+                    </span>
+                    <span className="text-blue-400 flex items-center gap-2">
+                        <ChevronRight size={18} />
+                        {inExtraTime ? "DO OR DIE!" : `Q${currentQuestionIndexInStage + 1} of ${questionsForStage.length}`}
+                    </span>
                     <span className="text-yellow-400 flex items-center gap-2">
                         <Timer size={18} /> {timeLeft}s
                     </span>
@@ -790,7 +827,7 @@ function App() {
 
             {/* Footer / Spacer */}
             <div className="mt-6 w-full max-w-2xl text-center text-gray-500 text-sm">
-                <p>&copy; {new Date().getFullYear()} FIQScore. All rights reserved.</p>
+                <p>&copy; {new Date().getFullYear()} WTFootball. All rights reserved.</p>
             </div>
         </div>
     );
