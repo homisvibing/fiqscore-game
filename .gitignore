@@ -1,2 +1,14 @@
-# Local Netlify folder
-.netlify
+    # Node modules
+    node_modules/
+
+    # Build artifacts
+    build/
+    .netlify/
+
+    # Environment variables
+    .env
+
+    # Ignore the .git folder within the client directory
+    # This prevents Git from treating 'client' as a submodule
+    client/.git/
+    
