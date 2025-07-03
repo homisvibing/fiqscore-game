@@ -55,14 +55,14 @@ const YES_OPTIONS = ["Sí", "Of course!", "Hell yeah!", "For sure!", "Yup"];
 const NO_OPTIONS = ["No", "No way", "No chance", "Nah Agh", "Nope!"];
 
 // eslint-disable-next-line no-unused-vars
-function getYNOptions(isCorrectYes) { // Added eslint-disable-next-line
+function getYNOptions(isCorrectYes) {
     const options = new Set();
     const correctOption = isCorrectYes ? YES_OPTIONS[Math.floor(Math.random() * YES_OPTIONS.length)] : NO_OPTIONS[Math.floor(Math.random() * NO_OPTIONS.length)];
     options.add(correctOption);
 
     while (options.size < 2) { // Ensure two distinct options for Y/N
         // eslint-disable-next-line no-unused-vars
-        const randomYes = YES_OPTIONS[Math.floor(Math.random() * YES_OPTIONS.length)]; // Added eslint-disable-next-line
+        const randomYes = YES_OPTIONS[Math.floor(Math.random() * YES_OPTIONS.length)];
         const randomNo = NO_OPTIONS[Math.floor(Math.random() * NO_OPTIONS.length)];
         if (isCorrectYes) {
             if (!options.has(randomNo)) options.add(randomNo);
@@ -130,6 +130,7 @@ function App() {
 
 
     // --- fetchQuestions function (defined first as it's a core dependency) ---
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const fetchQuestions = useCallback(async (stage, tournamentParam1, tournamentParam2, difficulty = null) => {
         console.log(`FETCH_INIT: Starting fetch for stage: ${stage}, difficulty: ${difficulty || 'N/A'}`);
         setLoading(true);
@@ -202,7 +203,7 @@ function App() {
             setLoading(false);
             console.log("FETCH_FINALLY: Loading set to false.");
         }
-    }, [currentStageName, inExtraTime]); // Removed currentStageName as a direct dependency here, it's used indirectly via `stage` parameter.
+    }, [inExtraTime]); // Removed currentStageName as a direct dependency here, it's used indirectly via `stage` parameter.
 
 
     // --- moveToNextQuestion function ---
@@ -354,8 +355,7 @@ function App() {
 
 
     // --- handleSubmitAnswer function ---
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const handleSubmitAnswer = useCallback((answerToSubmit, fromTimer = false) => { // Added eslint-disable-next-line
+    const handleSubmitAnswer = useCallback((answerToSubmit, fromTimer = false) => {
         console.log(`SUBMIT: Answer submitted: ${answerToSubmit}, From Timer: ${fromTimer}, Feedback status: ${feedback}, In Extra Time: ${inExtraTime}`);
 
         if (feedback !== null && !inExtraTime) {
@@ -405,7 +405,7 @@ function App() {
             console.log("SUBMIT: Timeout finished. Calling moveToNextQuestion().");
             moveToNextQuestion();
         }, 1500);
-    }, [feedback, currentQuestion, currentStageName, moveToNextQuestion, inExtraTime, extraTimeQuestion, selectedAnswer, score, totalGameScore]);
+    }, [feedback, currentQuestion, currentStageName, moveToNextQuestion, inExtraTime, extraTimeQuestion, score, totalGameScore]);
 
 
     // --- Timer Logic (useEffect) ---
@@ -421,7 +421,8 @@ function App() {
 
         const currentTimerDuration = inExtraTime ? (STAGE_TIMERS[currentStageName] / 2) : STAGE_TIMERS[currentStageName];
         
-        // This condition tries to prevent premature timer resets.
+        let intervalIdLocal; // Declare a local variable to hold the interval ID for cleanup
+
         // Re-initialize if:
         // 1. timeLeft is 0 (first load or previous timer ran out)
         // 2. The current question has changed (e.g., new Q in stage, or transition to extra time Q)
@@ -434,19 +435,18 @@ function App() {
              setTimeLeft(currentTimerDuration);
              clearInterval(timerRef.current.intervalId); // Clear any old interval
              
-             // Capture intervalId in a local variable for cleanup to avoid stale closure warning
-             const id = setInterval(() => { 
+             intervalIdLocal = setInterval(() => { // Assign to local variable
                  setTimeLeft(prevTime => {
                      if (prevTime <= 1) {
                          console.log("TIMER: Countdown finished.");
-                         clearInterval(id); // Clear using the local id
+                         clearInterval(intervalIdLocal); // Clear using the local id
                          handleSubmitAnswer(selectedAnswer, true); // Automatically submit if time runs out
                          return 0;
                      }
                      return prevTime - 1;
                  });
              }, 1000);
-             timerRef.current.intervalId = id; // Store interval ID in a property
+             timerRef.current.intervalId = intervalIdLocal; // Store interval ID in ref for other parts of the component
              // Store current question ID and extra time state with the timer ref object
              timerRef.current.questionId = currentQuestion.id;
              timerRef.current.inExtraTimeState = inExtraTime;
@@ -456,11 +456,11 @@ function App() {
         // Cleanup on component unmount or dependencies change
         return () => {
             console.log("TIMER: Cleanup function running. Clearing interval.");
-            // Use the stored intervalId for cleanup
-            clearInterval(timerRef.current.intervalId);
+            // Use the local variable for cleanup, which captures the ID from this specific effect run
+            clearInterval(intervalIdLocal);
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [gameStarted, gameOver, currentQuestion, loading, currentStageName, handleSubmitAnswer, selectedAnswer, feedback, inExtraTime]); // Removed timeLeft from here
+    }, [gameStarted, gameOver, currentQuestion, loading, currentStageName, handleSubmitAnswer, selectedAnswer, feedback, inExtraTime]);
 
     // Set a random challenge message on initial load and game reset
     useEffect(() => {
